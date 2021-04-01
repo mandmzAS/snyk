@@ -2,12 +2,23 @@ import * as YAML from 'js-yaml';
 import { CustomError } from '../../../../../lib/errors';
 import {
   EngineType,
-  IacFileParsed,
-  IacFileData,
   IaCErrorCodes,
+  IacFileData,
+  IacFileParsed,
 } from '../types';
 
 const REQUIRED_K8S_FIELDS = ['apiVersion', 'kind', 'metadata'];
+
+export function validateYamlFile(fileData: IacFileData) {
+  const lines: string[] = fileData.fileContent.split(/\r\n|\r|\n/);
+
+  lines.forEach((line) => {
+    const isHelmFile = line.includes('{{') && line.includes('}}');
+    if (isHelmFile) {
+      throw new HelmFileNotSupportedError(fileData.filePath);
+    }
+  });
+}
 
 export function tryParsingKubernetesFile(
   fileData: IacFileData,
@@ -44,6 +55,15 @@ class FailedToParseKubernetesYamlError extends CustomError {
     this.userMessage = `We were unable to parse the YAML file "${filename}". Please ensure that it contains properly structured YAML`;
   }
 }
+
+export class HelmFileNotSupportedError extends CustomError {
+  constructor(filename: string) {
+    super('Failed to parse Helm file');
+    this.code = IaCErrorCodes.FailedToParseHelmError;
+    this.userMessage = `We were unable to parse the YAML file "${filename}" as we currently do not support scanning of Helm files.`;
+  }
+}
+
 export class MissingRequiredFieldsInKubernetesYamlError extends CustomError {
   constructor(filename: string) {
     super('Failed to detect Kubernetes file, missing required fields');

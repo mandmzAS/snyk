@@ -1,9 +1,10 @@
+import * as fileParser from '../../../../src/cli/commands/test/iac-local-execution/file-parser';
+import * as k8sParser from '../../../../src/cli/commands/test/iac-local-execution/parsers/kubernetes-parser';
 import {
   parseFiles,
   tryParseIacFile,
   UnsupportedFileTypeError,
 } from '../../../../src/cli/commands/test/iac-local-execution/file-parser';
-import * as fileParser from '../../../../src/cli/commands/test/iac-local-execution/file-parser';
 import {
   expectedInvalidK8sFileParsingResult,
   expectedKubernetesParsingResult,
@@ -12,12 +13,12 @@ import {
   kubernetesFileDataStub,
   terraformFileDataStub,
 } from './file-parser.fixtures';
-import { MissingRequiredFieldsInKubernetesYamlError } from '../../../../src/cli/commands/test/iac-local-execution/parsers/kubernetes-parser';
+import {
+  HelmFileNotSupportedError,
+  MissingRequiredFieldsInKubernetesYamlError,
+} from '../../../../src/cli/commands/test/iac-local-execution/parsers/kubernetes-parser';
 import { IacFileData } from '../../../../src/cli/commands/test/iac-local-execution/types';
 import { IacFileTypes } from '../../../../dist/lib/iac/constants';
-import { UnsupportedError } from 'snyk-nodejs-lockfile-parser/dist/errors';
-import * as fileLoader from '../../../../src/cli/commands/test/iac-local-execution/file-loader';
-import { FailedToLoadFileError } from '../../../../src/cli/commands/test/iac-local-execution/file-loader';
 
 const filesToParse: IacFileData[] = [
   kubernetesFileDataStub,
@@ -63,5 +64,14 @@ describe('parseFiles', () => {
     ]);
 
     await expect(parseFilesFn).rejects.toThrow(UnsupportedFileTypeError);
+  });
+
+  it('will not parse if Helm file', async () => {
+    jest.spyOn(fileParser, 'tryParseIacFile').mockImplementation(() => {
+      throw HelmFileNotSupportedError;
+    });
+    const spy = jest.spyOn(k8sParser, 'tryParsingKubernetesFile');
+
+    await expect(spy).not.toHaveBeenCalled();
   });
 });

@@ -1,4 +1,7 @@
-import { tryParsingKubernetesFile } from './parsers/kubernetes-parser';
+import {
+  tryParsingKubernetesFile,
+  validateYamlFile,
+} from './parsers/kubernetes-parser';
 import { tryParsingTerraformFile } from './parsers/terraform-file-parser';
 import { tryParsingTerraformPlan } from './parsers/terraform-plan-parser';
 
@@ -16,8 +19,8 @@ import { CustomError } from './../../../../lib/errors/custom-error';
 export async function parseFiles(
   filesData: IacFileData[],
 ): Promise<ParsingResults> {
-  const parsedFiles: Array<IacFileParsed> = [];
-  const failedFiles: Array<IacFileParseFailure> = [];
+  const parsedFiles: IacFileParsed[] = [];
+  const failedFiles: IacFileParseFailure[] = [];
   for (const fileData of filesData) {
     try {
       parsedFiles.push(...tryParseIacFile(fileData));
@@ -50,11 +53,13 @@ function generateFailedParsedFile(
 
 const TF_PLAN_NAME = 'tf-plan.json';
 
-export function tryParseIacFile(fileData: IacFileData): Array<IacFileParsed> {
+export function tryParseIacFile(fileData: IacFileData): IacFileParsed[] {
   analytics.add('iac-terraform-plan', false);
   switch (fileData.fileType) {
     case 'yaml':
     case 'yml':
+      validateYamlFile(fileData);
+      return tryParsingKubernetesFile(fileData);
     case 'json':
       // TODO: this is a temporary approach for the internal release only
       if (path.basename(fileData.filePath) === TF_PLAN_NAME) {
